@@ -28,10 +28,22 @@ fi
 
 DB_ROLE="${DB_ROLE:-master}"
 DB_SERVER_ID="${DB_SERVER_ID:-1}"
+DB_BIND_ADDRESS="${DB_BIND_ADDRESS:-127.0.0.1}"
 
-if [ "$DB_ROLE" == "master" ]; then
+MASTER_USER="${MASTER_USER:-slave_user}"
+MASTER_HOST="${MASTER_HOST:-}"
+MASTER_PASSWORD="${MASTER_PASSWORD:-}"
+MASTER_LOG="${MASTER_LOG:-}"
+MASTER_POSITION="${MASTER_POSITION:-}"
+
+add_mysql_config() {
   cp ./my.cnf /etc/mysql/my.cnf
   add_config server-id=$DB_SERVER_ID /etc/mysql/my.cnf
+}
+
+if [ "$DB_ROLE" == "master" ]; then
+  add_mysql_config
+  add_config bind-address=$DB_BIND_ADDRESS /etc/mysql/my.cnf
 
   if [ ! -f "~/.db.replication.passport" ]; then
     REPLICATION_PASSPORT=$(openssl rand -base64 36 | tr -d "=+/" | cut -c1-32)
@@ -43,4 +55,8 @@ if [ "$DB_ROLE" == "master" ]; then
   mysql -e "GRANT REPLICATION SLAVE ON *.* TO 'slave_user'@'%' IDENTIFIED BY '$REPLICATION_PASSPORT'"
   mysql -e "FLUSH PRIVILEGES;"
   sudo service mysql restart
+else
+  add_mysql_config
+  mysql -e "CHANGE MASTER TO MASTER_HOST='$MASTER_HOST',MASTER_USER='$MASTER_USER', MASTER_PASSWORD='$MASTER_PASSWORD', MASTER_LOG_FILE='$MASTER_LOG', MASTER_LOG_POS=$MASTER_POSITION"
+  mysql -e "START SLAVE"
 fi
