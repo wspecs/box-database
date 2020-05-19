@@ -3,6 +3,15 @@
 source /etc/wspecs/global.conf
 source /etc/wspecs/functions.sh
 
+DB_ROLE="${DB_ROLE:-master}"
+DB_SERVER_ID="${DB_SERVER_ID:-1}"
+DB_BIND_ADDRESS="${DB_BIND_ADDRESS:-$(ip -4 addr show eth1 | grep -oP '(?<=inet\s)\d+(\.\d+){3}')}"
+MASTER_USER="${MASTER_USER:-slave_user}"
+MASTER_HOST="${MASTER_HOST:-}"
+MASTER_PASSWORD="${MASTER_PASSWORD:-}"
+MASTER_LOG="${MASTER_LOG:-}"
+MASTER_POSITION="${MASTER_POSITION:-}"
+
 install_once mysql-server
 
 if [ -f "~/.my.cnf" ]; then
@@ -25,16 +34,6 @@ password=$NEW_PASSWORD
 EOL
   chmod 0600 ~/.my.cnf
 fi
-
-DB_ROLE="${DB_ROLE:-master}"
-DB_SERVER_ID="${DB_SERVER_ID:-1}"
-DB_BIND_ADDRESS="${DB_BIND_ADDRESS:-127.0.0.1}"
-
-MASTER_USER="${MASTER_USER:-slave_user}"
-MASTER_HOST="${MASTER_HOST:-}"
-MASTER_PASSWORD="${MASTER_PASSWORD:-}"
-MASTER_LOG="${MASTER_LOG:-}"
-MASTER_POSITION="${MASTER_POSITION:-}"
 
 add_mysql_config() {
   cp ./my.cnf /etc/mysql/my.cnf
@@ -59,4 +58,5 @@ else
   add_mysql_config
   mysql -e "CHANGE MASTER TO MASTER_HOST='$MASTER_HOST',MASTER_USER='$MASTER_USER', MASTER_PASSWORD='$MASTER_PASSWORD', MASTER_LOG_FILE='$MASTER_LOG', MASTER_LOG_POS=$MASTER_POSITION"
   mysql -e "START SLAVE"
+  sudo service mysql restart
 fi
