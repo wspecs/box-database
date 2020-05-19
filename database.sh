@@ -25,3 +25,22 @@ password=$NEW_PASSWORD
 EOL
   chmod 0600 ~/.my.cnf
 fi
+
+DB_ROLE="${DB_ROLE:-master}"
+DB_SERVER_ID="${DB_SERVER_ID:-1}"
+
+if [ "$DB_ROLE" == "master" ]; then
+  cp ./my.cnf /etc/mysql/my.cnf
+  add_config server-id=$DB_SERVER_ID /etc/mysql/my.cnf
+
+  if [ ! -f "~/.db.replication.passport" ]; then
+    REPLICATION_PASSPORT=$(openssl rand -base64 36 | tr -d "=+/" | cut -c1-32)
+    add_config passport=$REPLICATION_PASSPORT ~/.db.replication.passport
+  fi
+
+  mkdir -p /var/log/mysql
+  chown -R mysql:mysql /var/log/mysql
+  mysql -e "GRANT REPLICATION SLAVE ON *.* TO 'slave_user'@'%' IDENTIFIED BY '$REPLICATION_PASSPORT'"
+  mysql -e "FLUSH PRIVILEGES;"
+  sudo service mysql restart
+fi
