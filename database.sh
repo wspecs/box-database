@@ -73,7 +73,7 @@ mysql -e "FLUSH PRIVILEGES;"
 mysql -e "SET SQL_LOG_BIN=1;"
 mysql -e "CHANGE MASTER TO MASTER_USER='repl', MASTER_PASSWORD='${GROUP_PASSWORD}' FOR CHANNEL 'group_replication_recovery';"
 mysql -e "SHOW PLUGINS;"
-if [[ $(mysql -e "SHOW PLUGINS;" | head -c1 | wc -c) -eq 0 ]]; then 
+if [[ $(mysql -e "SHOW PLUGINS;" | grep group_replication | head -c1 | wc -c) -eq 0 ]]; then 
   mysql -e "INSTALL PLUGIN group_replication SONAME 'group_replication.so';"
 fi
 mysql -e "SHOW PLUGINS;"
