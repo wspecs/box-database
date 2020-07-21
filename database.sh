@@ -40,6 +40,12 @@ if [ ! -z "${FINISH_INSTALLATION+x}" ]; then
   exit
 fi
 
+SERVERS=($DATABASE_SERVERS)
+for i in "${!SERVERS[@]}"; do
+  if [[ "${SERVERS[$i]}" = "${CURRENT_IP}" ]]; then
+    SERVER_ID=$(echo ${i} + 1 | bc)
+  fi
+done
 join IPS , ${DATABASE_SERVERS}
 join SEED :33061, ${DATABASE_SERVERS}
 SEEDS=${SEED}:33061
