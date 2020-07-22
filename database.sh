@@ -13,6 +13,7 @@ function join() {
 }
 
 CONFIG_FILE=${CONFIG_FILE:-/etc/mysql/my.cnf}
+ALLOW_IP=${ALLOW_IP:-10.108.0.0/20}
 UNIQUE_ID="${UNIQUE_ID:-$(uuidgen)}"
 CURRENT_IP=$(curl 169.254.169.254/metadata/v1/interfaces/private/0/ipv4/address && echo)
 SERVER_ID=1
@@ -63,8 +64,8 @@ sed -i "s#SEEDS#$SEEDS#" $CONFIG_FILE
 
 systemctl restart mysql
 
-sudo ufw allow from 10.138.0.0/16 to any port 33061
-sudo ufw allow from 10.138.0.0/16 to any port 3306
+sudo ufw allow from $ALLOW_IP to any port 33061
+sudo ufw allow from $ALLOW_IP to any port 3306
 
 mysql -e "SET SQL_LOG_BIN=0;"
 mysql -e "CREATE USER IF NOT EXISTS 'repl'@'%' IDENTIFIED BY '${GROUP_PASSWORD}' REQUIRE SSL;"
