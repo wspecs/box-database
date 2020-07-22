@@ -12,25 +12,52 @@ function join() {
     printf -v "$retname" "%s" "$ret${@/#/$sep}"
 }
 
+function setup_group_replication() {
+    mysql -e "SET SQL_LOG_BIN=0;"
+    mysql -e "CREATE USER IF NOT EXISTS 'repl'@'%' IDENTIFIED BY '${GROUP_PASSWORD}' REQUIRE SSL;"
+    mysql -e "GRANT REPLICATION SLAVE ON *.* TO 'repl'@'%';"
+    mysql -e "FLUSH PRIVILEGES;"
+    mysql -e "SET SQL_LOG_BIN=1;"
+    mysql -e "CHANGE MASTER TO MASTER_USER='repl', MASTER_PASSWORD='${GROUP_PASSWORD}' FOR CHANNEL 'group_replication_recovery';"
+    mysql -e "SHOW PLUGINS;"
+    if [[ $(mysql -e "SHOW PLUGINS;" | grep group_replication | head -c1 | wc -c) -eq 0 ]]; then 
+      mysql -e "INSTALL PLUGIN group_replication SONAME 'group_replication.so';"
+    fi
+    mysql -e "SHOW PLUGINS;"
+}
+
+function start_first_node() {
+  mysql -e "SET GLOBAL group_replication_bootstrap_group=ON;"
+  mysql -e "START GROUP_REPLICATION;"
+  mysql -e "SET GLOBAL group_replication_bootstrap_group=OFF;"
+  mysql -e "SELECT * FROM performance_schema.replication_group_members;"
+  echo Node Started
+}
+
+start_node() {
+  mysql -e "START GROUP_REPLICATION;"
+  mysql -e "SELECT * FROM performance_schema.replication_group_members;"
+  echo Node Started
+}
+
 CONFIG_FILE=${CONFIG_FILE:-/etc/mysql/my.cnf}
 ALLOW_IP=${ALLOW_IP:-10.108.0.0/20}
 UNIQUE_ID="${UNIQUE_ID:-$(uuidgen)}"
 CURRENT_IP=$(curl 169.254.169.254/metadata/v1/interfaces/private/0/ipv4/address && echo)
 SERVER_ID=1
 
+if [ ! -z "${SETUP_GROUP_REPLICATION+x}" ]; then
+  setup_group_replication
+  exit
+fi
+
 if [ ! -z "${START_FIRST_NODE+x}" ]; then
-  mysql -e "SET GLOBAL group_replication_bootstrap_group=ON;"
-  mysql -e "START GROUP_REPLICATION;"
-  mysql -e "SET GLOBAL group_replication_bootstrap_group=OFF;"
-  mysql -e "SELECT * FROM performance_schema.replication_group_members;"
-  echo Node Started
+  start_first_node
   exit
 fi
 
 if [ ! -z "${START_NODE+x}" ]; then
-  mysql -e "START GROUP_REPLICATION;"
-  mysql -e "SELECT * FROM performance_schema.replication_group_members;"
-  echo Node Started
+  start_node
   exit
 fi
 
@@ -66,16 +93,4 @@ systemctl restart mysql
 
 sudo ufw allow from $ALLOW_IP to any port 33061
 sudo ufw allow from $ALLOW_IP to any port 3306
-
-mysql -e "SET SQL_LOG_BIN=0;"
-mysql -e "CREATE USER IF NOT EXISTS 'repl'@'%' IDENTIFIED BY '${GROUP_PASSWORD}' REQUIRE SSL;"
-mysql -e "GRANT REPLICATION SLAVE ON *.* TO 'repl'@'%';"
-mysql -e "FLUSH PRIVILEGES;"
-mysql -e "SET SQL_LOG_BIN=1;"
-mysql -e "CHANGE MASTER TO MASTER_USER='repl', MASTER_PASSWORD='${GROUP_PASSWORD}' FOR CHANNEL 'group_replication_recovery';"
-mysql -e "SHOW PLUGINS;"
-if [[ $(mysql -e "SHOW PLUGINS;" | grep group_replication | head -c1 | wc -c) -eq 0 ]]; then 
-  mysql -e "INSTALL PLUGIN group_replication SONAME 'group_replication.so';"
-fi
-mysql -e "SHOW PLUGINS;"
 
