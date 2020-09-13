@@ -92,6 +92,31 @@ sed -i "s#SEEDS#$SEEDS#" $CONFIG_FILE
 
 systemctl restart mysql
 
+# Start group replication installation
+setup_group_replication
+
+if [[ "${SERVER_ID}" = 1 ]]; then
+  echo starting first node
+  start_first_node
+else
+  while :  # Wait for first node to start first
+  do
+    if [[ $(cat text_for_playground.txt | grep group_replication_applier | head -c1 | wc -c) -eq 1 ]]; then 
+      break
+    fi
+    sleep 2s
+    echo waiting to join group replication
+  done
+    echo Joining group replication
+    start_node
+fi
+
+echo
+
 sudo ufw allow from $ALLOW_IP to any port 33061
 sudo ufw allow from $ALLOW_IP to any port 3306
+
+echo '-----------------------------------'
+echo "|  SUCCESSFULLY STARTED SERVER ${SERVER_ID}  |"
+echo '-----------------------------------'
 
