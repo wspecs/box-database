@@ -35,8 +35,8 @@ function start_first_node() {
 }
 
 start_node() {
-  mysql -e "START GROUP_REPLICATION;"
   mysql -e "RESET MASTER;"
+  mysql -e "START GROUP_REPLICATION;"
   mysql -e "SELECT * FROM performance_schema.replication_group_members;"
   echo Node Started
 }
@@ -101,7 +101,7 @@ if [[ "${SERVER_ID}" = 1 ]]; then
 else
   while :  # Wait for first node to start first
   do
-    if [[ $(cat text_for_playground.txt | grep group_replication_applier | head -c1 | wc -c) -eq 1 ]]; then 
+    if [[ $(mysql -e "SELECT * FROM performance_schema.replication_group_members;" | grep group_replication_applier | head -c1 | wc -c) -eq 1 ]]; then
       break
     fi
     sleep 2s
