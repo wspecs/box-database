@@ -116,11 +116,6 @@ echo
 sudo ufw allow from $ALLOW_IP to any port 33061
 sudo ufw allow from $ALLOW_IP to any port 3306
 
-echo setting start on boot
-sed -i "#start_on_boot = OFF#start_on_boot = ON#" $CONFIG_FILE
-systemctl restart mysql
-echo Installation completed
-
 echo '-----------------------------------'
 echo "|  SUCCESSFULLY STARTED SERVER ${SERVER_ID}  |"
 echo '-----------------------------------'
